@@ -1,0 +1,28 @@
+# Eclipse project files
+.classpath
+.project
+.settings
+.metadata
+test-output
+
+# IDEA project files
+*.iml
+*.ipr
+*.iws
+.idea/*
+!.idea/runConfigurations/
+
+# Emacs/Vi backup files
+*~
+
+# Vi swap files
+.*.swp
+
+# Compiled python files
+*.pyc
+build/
+dist/
+*.egg-info/
+
+# Virtual environment
+venv/
