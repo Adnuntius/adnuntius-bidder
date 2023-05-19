@@ -4,15 +4,30 @@ __copyright__ = "Copyright (c) 2023 Adnuntius AS.  All rights reserved."
 
 import signal
 import sys
-from adnuntius.api import *
-from adnuntius.util import date_to_string, str_to_date
 from datetime import datetime, timedelta
 from threading import Event
+from adnuntius.api import Api
+from adnuntius.util import date_to_string, str_to_date
 
 
 class BidUpdate:
-
-    def __init__(self, line_item_id, site_id, upper_bid_cpm, lower_bid_cpm=None, lower_bids_percent=0):
+    """
+    Object to hold a bid update request
+    """
+    def __init__(self,
+                 line_item_id,
+                 site_id,
+                 upper_bid_cpm,
+                 lower_bid_cpm=None,
+                 lower_bids_percent=0):
+        """
+        Initialise the bid update
+        :param line_item_id: line item identifier
+        :param site_id: site identifier
+        :param upper_bid_cpm: the highest bid to use
+        :param lower_bid_cpm: the lowest bid to use
+        :param lower_bids_percent: the percentage of bids that should use the low bid amount
+        """
         self.line_item_id = line_item_id
         self.site_id = site_id
         if lower_bid_cpm is None:
@@ -23,6 +38,10 @@ class BidUpdate:
         self.lower_bids_percent = lower_bids_percent
 
     def to_payload(self) -> dict:
+        """
+        Converts this object into a dict as expected by the Adnuntius API
+        :return:
+        """
         return {
             'id': self.line_item_id,
             'site': self.site_id,
@@ -35,7 +54,8 @@ class BidUpdate:
 class AdnBidder:
     """
     The main bidder class.
-    Custom bidders should inherit from this base, and override methods to provide custom bidding algorithms.
+    Custom bidders should inherit from this base, and override methods to provide custom
+    bidding algorithms.
     """
 
     def __init__(self, api_key, network_id, api_scheme='https', api_host='api.adnuntius.com'):
@@ -57,8 +77,8 @@ class AdnBidder:
     def start(self):
         """
         Starts the bidding service.
-        This runs the main service loop, which periodically fetches the current bidding data for each active line-item
-        and makes adjustments to the bid prices as required.
+        This runs the main service loop, which periodically fetches the current bidding data for
+        each active line-item and makes adjustments to the bid prices as required.
         """
         print('Bidder started!')
         while not self.exit.is_set():
@@ -70,14 +90,15 @@ class AdnBidder:
     def update_all_bids(self):
         """
         Updates the bids for all active Adnuntius line-items.
-        This method is a good entry point if the bidder is being run according to an externally controlled schedule,
-        for example as a scheduled AWS Lambda.
+        This method is a good entry point if the bidder is being run according to an externally
+        controlled schedule, for example as a scheduled AWS Lambda.
         - Queries for all active line-items configured for custom bidding control
         - Adjusts the bidding, if required, for each line-item
         :return:
         """
         query_filter = {
-            'where': 'biddingAlgorithm=CUSTOM;userState in APPROVED;objectState=ACTIVE;executionState in RUNNING,READY'
+            'where': 'biddingAlgorithm=CUSTOM;userState in APPROVED;'
+                     'objectState=ACTIVE;executionState in RUNNING,READY '
         }
         line_items = self.api_client.line_items.query(args=query_filter)
         if len(line_items['results']) == 0:
@@ -106,12 +127,12 @@ class AdnBidder:
         for bid_update in self.get_line_item_bid_updates(line_item, line_item_stats):
             self.api_client.bidding.update(bid_update.to_payload())
 
-    def get_line_item_bid_updates(self, line_item, line_item_stats) -> list[BidUpdate]:
+    def get_line_item_bid_updates(self, line_item, line_item_stats):
         """
         This is the heart of the bidding control algorithm. Custom bidder implementations
         should override this method to provide custom bidding decisions in their adaptor.
         :param line_item: The Line Item object
-        :param line_item_stats: The bidding data for the Line Item across all of the Sites where it runs.
+        :param line_item_stats: The bid data for the Line Item across all the Sites where it runs.
         :return: A list of Bid Updates to adjust the bid CPM for the Line Item on specific Sites.
         """
         budget = line_item['objectives']['BUDGET']['amount']
@@ -134,17 +155,28 @@ class AdnBidder:
                 if site_bid.win_rate < 0.95:
                     # Try bidding higher
                     bid_lower = False
-            site_impressions_per_minute = site_bid.impression_share * line_item_stats.available_impressions_per_second * 60
+            site_impressions_per_minute = site_bid.impression_share * \
+                                          line_item_stats.available_impressions_per_second * 60
             site_required_spend_per_minute = site_bid.impression_share * required_spend_per_minute
             for bid in site_bid.advertiser_site_bids.bid_win_rates:
                 if bid_lower or bid.bid_cpm['amount'] > site_bid.average_winning_cpm['amount']:
-                    expected_spend_per_minute = bid.bid_cpm['amount'] * bid.win_rate * site_impressions_per_minute / 1000
+                    expected_spend_per_minute = bid.bid_cpm['amount'] * bid.win_rate * \
+                                                site_impressions_per_minute / 1000
                     if expected_spend_per_minute > site_required_spend_per_minute:
-                        bid_updates.append(BidUpdate(line_item_stats.line_item_id, site_bid.site_id, bid.bid_cpm))
+                        bid_update = BidUpdate(line_item_stats.line_item_id,
+                                               site_bid.site_id,
+                                               bid.bid_cpm)
+                        bid_updates.append(bid_update)
                         break
         return bid_updates
 
     def shutdown(self, sig, frame):
+        """
+        Shuts down the bidder immediately
+        :param sig:
+        :param frame:
+        :return:
+        """
         print('Shutting down bidder...')
         self.exit.set()
 
@@ -171,11 +203,13 @@ class BidWinRate:
 
 class AdvertiserSiteBids:
     """
-    Structure for holding the historical win rate, at each CPM price, for an Advertiser on a specific Site.
-    This pools data from ALL the Advertiser's line-items.
+    Structure for holding the historical win rate, at each CPM price, for an Advertiser on a
+    specific Site. This pools data from ALL the Advertiser's line-items.
     - An entry is provided for any CPM bid used in the last 24 hours.
-    - At each CPM price, only the most recent 1 hour of bids at that price is used to estimate the expected win rate.
-    - The win rate is expressed as a number from 0 to 1, where 0 means the bid always loses and 1 means it always wins.
+    - At each CPM price, only the most recent 1 hour of bids at that price is used to estimate the
+      expected win rate.
+    - The win rate is expressed as a number from 0 to 1, where 0 means the bid always loses and 1
+      means it always wins.
     """
     def __init__(self, api_client, advertiser_id, site_id):
         """
@@ -189,7 +223,7 @@ class AdvertiserSiteBids:
         self.advertiser_id = advertiser_site_bid['advertiser']['id']
         self.site_name = advertiser_site_bid['site']['name']
         self.site_id = advertiser_site_bid['site']['id']
-        self.bid_win_rates = [BidWinRate(bid_win_rate) for bid_win_rate in advertiser_site_bid['bids']]
+        self.bid_win_rates = [BidWinRate(bwr) for bwr in advertiser_site_bid['bids']]
 
 
 class SiteBidStats:
@@ -197,12 +231,13 @@ class SiteBidStats:
     Structure for holding bidding data for a Line Item on a specific Site.
     Includes:
     - The total available impressions to bid on during the analysed time-period.
-    - The impression share for this Site, expressed as a number from 0 to 1, relative to the total impressions
-      available to the Line Item across ALL sites.
-    - The win rate, expressed as a number from 0 to 1. A value of 1 means that the Line Item wins every time that
-      it submits a bid. A value of 0 means that it never wins.
-    - The bidding rate, expressed as a number from 0 to 1. A value lower than 1 means that the line-item delivery
-      is being rate controlled by the system and is therefore not bidding on every impression.
+    - The impression share for this Site, expressed as a number from 0 to 1, relative to the
+      total impressions available to the Line Item across ALL sites.
+    - The win rate, expressed as a number from 0 to 1. A value of 1 means that the Line Item wins
+      every time that it submits a bid. A value of 0 means that it never wins.
+    - The bidding rate, expressed as a number from 0 to 1. A value lower than 1 means that the
+      line-item delivery is being rate controlled by the system and is therefore not bidding on
+      every impression.
     - The average winning bid CPM.
     - The average losing bid CPM.
     - The pooled Advertiser bidding stats for this Site. See
@@ -229,9 +264,11 @@ class LineItemBidStats:
     """
     Structure for holding the bidding data for a Line Item.
     Includes:
-    - The total available impressions to bid on during the analysed time period (default: the last one hour).
+    - The total available impressions to bid on during the analysed time period (default: the last
+      one hour).
     - The available impressions per second.
-    - The bidding data broken down by each Site that the line-item has bid on during the analysed time period.
+    - The bidding data broken down by each Site that the line-item has bid on during the analysed
+      time period.
     """
     def __init__(self, api_client, line_item, window=timedelta(hours=1)):
         """
@@ -243,7 +280,8 @@ class LineItemBidStats:
         self.line_item_id = line_item['id']
         self.line_item_name = line_item['name']
         since = datetime.utcnow() - window
-        line_item_stats = api_client.bidding_line_item_stats.get(self.line_item_id, {'since': date_to_string(since)})
+        line_item_stats = api_client.bidding_line_item_stats.get(self.line_item_id,
+                                                                 {'since': date_to_string(since)})
         self.advertiser_name = line_item_stats['advertiser']['name']
         self.advertiser_id = line_item_stats['advertiser']['id']
         self.available_impressions = line_item_stats['availableImpressions']
@@ -252,4 +290,5 @@ class LineItemBidStats:
             self.available_impressions_per_second = self.available_impressions / range_seconds
         else:
             self.available_impressions_per_second = 0
-        self.site_bids = [SiteBidStats(api_client, self.advertiser_id, site_bid) for site_bid in line_item_stats['siteBids']]
+        self.site_bids = [SiteBidStats(api_client, self.advertiser_id, site_bid)
+                          for site_bid in line_item_stats['siteBids']]
