@@ -118,14 +118,17 @@ class AdnBidder:
         :param line_item: An Adnuntius line-item or line-item identifier
         :return:
         """
-        if isinstance(line_item, dict) and 'id' in line_item:
-            line_item_id = line_item['id']
-        else:
+        if not (isinstance(line_item, dict) and 'id' in line_item):
             line_item_id = line_item
             line_item = self.api_client.line_items.get(line_item_id)
         line_item_stats = LineItemBidStats(self.api_client, line_item)
         for bid_update in self.get_line_item_bid_updates(line_item, line_item_stats):
-            self.api_client.bidding.update(bid_update.to_payload())
+            try:
+                self.api_client.bidding.update(bid_update.to_payload())
+            except RuntimeError as err:
+                # The Adnuntius API module reports API errors a RuntimeErrors.
+                # Just log the error and keep the bidder going
+                print(err)
 
     def get_line_item_bid_updates(self, line_item, line_item_stats):
         """
