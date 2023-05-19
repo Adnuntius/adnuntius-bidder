@@ -22,7 +22,7 @@ class CustomBidder(AdnBidder):
         }
 
     @override
-    def get_line_item_bid_updates(self, line_item, line_item_stats) -> list[BidUpdate]:
+    def get_line_item_bid_updates(self, line_item, line_item_stats):
         """
         This provides a simple fixed bidding strategy, where different bids are
         specified based upon a hard-coded list of bids for each publisher site
