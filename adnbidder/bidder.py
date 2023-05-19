@@ -126,9 +126,7 @@ class AdnBidder:
             try:
                 self.api_client.bidding.update(bid_update.to_payload())
             except RuntimeError as err:
-                # The Adnuntius API module reports API errors a RuntimeErrors.
-                # Just log the error and keep the bidder going
-                print(err)
+                self.bid_error_handler(err)
 
     def get_line_item_bid_updates(self, line_item, line_item_stats):
         """
@@ -173,7 +171,7 @@ class AdnBidder:
                         break
         return bid_updates
 
-    def shutdown(self, sig, frame):
+    def shutdown(self, sig=None, frame=None):
         """
         Shuts down the bidder immediately
         :param sig:
@@ -190,6 +188,15 @@ class AdnBidder:
         :return:
         """
         return self
+
+    def bid_error_handler(self, error):
+        """
+        This method will be called if there is an error sending a bid update.
+        Should be overriden by custom bidders if you don't want to shut down on any error.
+        :return:
+        """
+        print(error)
+        self.shutdown()
 
 
 class BidWinRate:

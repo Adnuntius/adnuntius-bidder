@@ -38,6 +38,13 @@ class CustomBidder(AdnBidder):
             bid_updates.append(update)
         return bid_updates
 
+    @override
+    def bid_error_handler(self, error):
+        """
+        Just log errors and keep running.
+        """
+        print(error)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Custom bidder example")

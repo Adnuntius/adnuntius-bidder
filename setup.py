@@ -5,10 +5,10 @@ HERE = pathlib.Path(__file__).parent
 README = (HERE / "README.md").read_text()
 setup(
     name="adnbidder",
-    version="1.0.0",
+    version="1.0.1",
     description="A simple client for controlling bidding in the Adnuntius platform",
     long_description="A simple client for controlling bidding in the Adnuntius platform",
-    url="https://github.com/Adnuntius/adnbidder",
+    url="https://github.com/Adnuntius/adnuntius-bidder",
     author="Adnuntius",
     author_email="tech@adnuntius.com",
     license="MIT",
