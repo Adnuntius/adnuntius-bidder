@@ -16,10 +16,12 @@ class BidUpdate:
     """
     def __init__(self,
                  line_item_id,
-                 site_id,
-                 upper_bid_cpm,
+                 site_id=None,
+                 upper_bid_cpm=None,
                  lower_bid_cpm=None,
-                 lower_bids_percent=0):
+                 lower_bids_percent=0,
+                 pause=None,
+                 resume=None):
         """
         Initialise the bid update
         :param line_item_id: line item identifier
@@ -36,12 +38,24 @@ class BidUpdate:
             self.lower_bid_cpm = lower_bid_cpm
         self.upper_bid_cpm = upper_bid_cpm
         self.lower_bids_percent = lower_bids_percent
+        self.pause = pause
+        self.resume = resume
 
     def to_payload(self) -> dict:
         """
         Converts this object into a dict as expected by the Adnuntius API
         :return:
         """
+        if self.pause is not None and self.pause:
+            return {
+                'id': self.line_item_id,
+                'pause': True
+            }
+        if self.resume is not None and self.resume:
+            return {
+                'id': self.line_item_id,
+                'resume': True
+            }
         return {
             'id': self.line_item_id,
             'site': self.site_id,
