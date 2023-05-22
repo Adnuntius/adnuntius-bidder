@@ -70,9 +70,7 @@ class AdnBidder:
         self.api_client = Api(None, None, api_location, api_key=api_key)
         self.api_client.defaultArgs['context'] = network_id
         self.loop_period = timedelta(minutes=5)
-        self.exit = Event()
-        for sig in ('TERM', 'HUP', 'INT'):
-            signal.signal(getattr(signal, 'SIG' + sig), self.shutdown)
+        self.exit = None
 
     def start(self):
         """
@@ -81,6 +79,11 @@ class AdnBidder:
         each active line-item and makes adjustments to the bid prices as required.
         """
         print('Bidder started!')
+        self.exit = Event()
+
+        for sig in ('TERM', 'HUP', 'INT'):
+            signal.signal(getattr(signal, 'SIG' + sig), self.shutdown)
+
         while not self.exit.is_set():
             self.update_all_bids()
             self.call_back()
@@ -178,8 +181,9 @@ class AdnBidder:
         :param frame:
         :return:
         """
-        print('Shutting down bidder...')
-        self.exit.set()
+        if self.exit is not None:
+            print('Shutting down bidder...')
+            self.exit.set()
 
     def call_back(self):
         """
