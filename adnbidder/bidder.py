@@ -17,6 +17,7 @@ class BidUpdate:
     def __init__(self,
                  line_item_id,
                  site_id=None,
+                 ad_unit_id=None,
                  upper_bid_cpm=None,
                  lower_bid_cpm=None,
                  lower_bids_percent=0,
@@ -32,6 +33,7 @@ class BidUpdate:
         """
         self.line_item_id = line_item_id
         self.site_id = site_id
+        self.ad_unit_id = ad_unit_id
         if lower_bid_cpm is None:
             self.lower_bid_cpm = upper_bid_cpm
         else:
@@ -56,13 +58,17 @@ class BidUpdate:
                 'id': self.line_item_id,
                 'resume': True
             }
-        return {
+        payload = {
             'id': self.line_item_id,
-            'site': self.site_id,
             'lowerCpm': self.lower_bid_cpm,
             'upperCpm': self.upper_bid_cpm,
             'lowBidPercent': self.lower_bids_percent,
         }
+        if self.ad_unit_id is not None:
+            payload['adUnit'] = self.ad_unit_id
+        elif self.site_id is not None:
+            payload['site'] = self.site_id
+        return payload
 
 
 class AdnBidder:
