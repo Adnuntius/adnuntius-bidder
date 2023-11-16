@@ -21,7 +21,7 @@ class BidUpdate:
                  upper_bid_cpm=None,
                  lower_bid_cpm=None,
                  lower_bids_percent=0,
-                 lower_bids_permille=None,
+                 lower_bids_permillion=None,
                  pause=None,
                  resume=None):
         """
@@ -41,7 +41,7 @@ class BidUpdate:
             self.lower_bid_cpm = lower_bid_cpm
         self.upper_bid_cpm = upper_bid_cpm
         self.lower_bids_percent = lower_bids_percent
-        self.lower_bids_permille = lower_bids_permille
+        self.lower_bids_permille = lower_bids_permillion
         self.pause = pause
         self.resume = resume
 
@@ -69,7 +69,7 @@ class BidUpdate:
         if self.lower_bids_percent is not None:
             payload['lowBidPercent'] = self.lower_bids_percent
         if self.lower_bids_permille is not None:
-            payload['lowBidPerMille'] = self.lower_bids_permille
+            payload['lowBidPerMillion'] = self.lower_bids_permille
         if self.ad_unit_id is not None:
             payload['adUnit'] = self.ad_unit_id
         elif self.site_id is not None:
