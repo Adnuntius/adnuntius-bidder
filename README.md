@@ -10,7 +10,7 @@ pip3 install adnbidder
 ```
 
 All production (not pre-release) releases from this repository are available in Pypi for installation via pip.
-You can select a particular version in pip with the `==` operator, for example `pip3 install adnbidder==1.0.0`
+You can select a particular version in pip with the `==` operator, for example `pip3 install adnbidder==1.0.7`
 
 Note that semantic versioning is used for production releases, so major versions indicate incompatible API changes, 
 minor versions indication additions to the api, and patch versions indicate backwards compatible bug fixes.

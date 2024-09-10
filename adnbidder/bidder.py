@@ -1,6 +1,6 @@
 """Bidding client for the Adnuntius platform"""
 
-__copyright__ = "Copyright (c) 2023 Adnuntius AS.  All rights reserved."
+__copyright__ = "Copyright (c) 2024 Adnuntius AS.  All rights reserved."
 
 import signal
 import sys
@@ -241,34 +241,9 @@ class BidWinRate:
         return str(self.bid_cpm['amount']) + ' ' + str(self.win_rate)
 
 
-class AdvertiserSiteBids:
+class SiteBidAverages:
     """
-    Structure for holding the historical win rate, at each CPM price, for an Advertiser on a
-    specific Site. This pools data from ALL the Advertiser's line-items.
-    - An entry is provided for any CPM bid used in the last 24 hours.
-    - At each CPM price, only the most recent 1 hour of bids at that price is used to estimate the
-      expected win rate.
-    - The win rate is expressed as a number from 0 to 1, where 0 means the bid always loses and 1
-      means it always wins.
-    """
-    def __init__(self, api_client, advertiser_id, site_id):
-        """
-        Initialise the object
-        :param api_client: An initialised Adnuntius API client
-        :param advertiser_id: The identifier for the Line Item's Advertiser
-        :param site_id: The identifier for the Site
-        """
-        advertiser_site_bid = api_client.bidding_advertiser_site_stats.get([advertiser_id, site_id])
-        self.advertiser_name = advertiser_site_bid['advertiser']['name']
-        self.advertiser_id = advertiser_site_bid['advertiser']['id']
-        self.site_name = advertiser_site_bid['site']['name']
-        self.site_id = advertiser_site_bid['site']['id']
-        self.bid_win_rates = [BidWinRate(bwr) for bwr in advertiser_site_bid['bids']]
-
-
-class SiteBidStats:
-    """
-    Structure for holding bidding data for a Line Item on a specific Site.
+    Structure for holding average bidding prices for a Line Item on a specific Site.
     Includes:
     - The total available impressions to bid on during the analysed time-period.
     - The impression share for this Site, expressed as a number from 0 to 1, relative to the
@@ -280,13 +255,10 @@ class SiteBidStats:
       every impression.
     - The average winning bid CPM.
     - The average losing bid CPM.
-    - The pooled Advertiser bidding stats for this Site. See
     """
-    def __init__(self, api_client, advertiser_id, line_item_site_bids):
+    def __init__(self, line_item_site_bids):
         """
         Initialise the object
-        :param api_client: An initialised Adnuntius API client
-        :param advertiser_id: The identifier for the Line Item's Advertiser
         :param line_item_site_bids: The bidding data from the Adnuntius API.
         """
         self.site_name = line_item_site_bids['site']['name']
@@ -297,7 +269,6 @@ class SiteBidStats:
         self.win_rate = line_item_site_bids['winRate']
         self.average_winning_cpm = line_item_site_bids['averageWinningCpm']
         self.average_losing_cpm = line_item_site_bids['averageLosingCpm']
-        self.advertiser_site_bids = AdvertiserSiteBids(api_client, advertiser_id, self.site_id)
 
 
 class LineItemBidStats:
@@ -330,5 +301,5 @@ class LineItemBidStats:
             self.available_impressions_per_second = self.available_impressions / range_seconds
         else:
             self.available_impressions_per_second = 0
-        self.site_bids = [SiteBidStats(api_client, self.advertiser_id, site_bid)
+        self.site_bids = [SiteBidAverages(site_bid)
                           for site_bid in line_item_stats['siteBids']]
